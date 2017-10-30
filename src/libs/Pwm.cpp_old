@@ -1,6 +1,6 @@
 #include "Pwm.h"
 
-#include "nuts_bolts.h"
+#include "utils.h"
 
 #define PID_PWM_MAX 256
 
@@ -12,7 +12,6 @@ Pwm::Pwm()
     _pwm = -1;
     _sd_direction= false;
     _sd_accumulator= 0;
-	_is_servo = false;
 }
 
 void Pwm::pwm(int new_pwm)
@@ -36,11 +35,6 @@ void Pwm::set(bool value)
 {
     _pwm = -1;
     Pin::set(value);
-}
-
-void Pwm::set_servo(bool value)
-{
-    _is_servo = value;
 }
 
 uint32_t Pwm::on_tick(uint32_t dummy)
@@ -115,11 +109,8 @@ uint32_t Pwm::on_tick(uint32_t dummy)
     // this line should never actually do anything, it's just a sanity check in case our accumulator gets corrupted somehow.
     // If we didn't check and the accumulator is corrupted, we could leave a heater on for quite a long time
     // the accumulator is kept within these limits by the normal operation of the Sigma-Delta algorithm
-//*
     _sd_accumulator = confine(_sd_accumulator, -PID_PWM_MAX, PID_PWM_MAX << 1);
 
-	if (!_is_servo) {
-	
     // when _sd_direction == false, our output is 0 and our accumulator is increasing by _pwm
     if (_sd_direction == false)
     {
@@ -138,46 +129,7 @@ uint32_t Pwm::on_tick(uint32_t dummy)
         if (_sd_accumulator <= 0)
             _sd_direction = false;
     }
-	
-	} else {
-	
-	// when _sd_direction == false, our output is 0 and our accumulator is increasing by _pwm
-
-    _sd_accumulator ++;
-    // if we've reached half of max, flip our direction
-    if (_sd_accumulator >= 99) _sd_accumulator = 0;
-    if (_sd_accumulator < _pwm)
-		_sd_direction = true;
-	else
-		_sd_direction = false;
-		
     Pin::set(_sd_direction);
-	
-/*
-    if (_sd_direction == false)
-    {
-        // increment accumulator
-        _sd_accumulator ++;
-        // if we've reached half of max, flip our direction
-        if (_sd_accumulator >= (200 - _pwm))
-            _sd_direction = true;
-    }
-    // when _sd_direction == true, our output is 1 and our accumulator is decreasing by (MAX - _pwm)
-    else
-    {
-        // decrement accumulator
-        _sd_accumulator ++;
-        // if we've reached 0, flip our direction
-        if (_sd_accumulator >= 200) {
-            _sd_direction = false;
-			_sd_accumulator = 0;
-		}
-    }
-	*/
-
-	}	
-	
-
 
     return dummy;
 }

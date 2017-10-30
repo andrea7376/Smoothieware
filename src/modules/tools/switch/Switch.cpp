@@ -45,6 +45,8 @@
 #define    pwm_period_ms_checksum       CHECKSUM("pwm_period_ms")
 #define    failsafe_checksum            CHECKSUM("failsafe_set_to")
 #define    ignore_onhalt_checksum       CHECKSUM("ignore_on_halt")
+#define    is_servo_checksum       		CHECKSUM("is_servo")
+
 
 Switch::Switch() {}
 
@@ -99,12 +101,15 @@ void Switch::on_config_reload(void *argument)
     this->failsafe= THEKERNEL->config->value(switch_checksum, this->name_checksum, failsafe_checksum )->by_default(0)->as_number();
     this->ignore_on_halt= THEKERNEL->config->value(switch_checksum, this->name_checksum, ignore_onhalt_checksum )->by_default(false)->as_bool();
 
+	bool is_servo =            THEKERNEL->config->value(switch_checksum, this->name_checksum, is_servo_checksum )->by_default(false)->as_bool();
+	
     std::string ipb = THEKERNEL->config->value(switch_checksum, this->name_checksum, input_pin_behavior_checksum )->by_default("momentary")->as_string();
     this->input_pin_behavior = (ipb == "momentary") ? momentary_checksum : toggle_checksum;
 
     if(type == "pwm"){
         this->output_type= SIGMADELTA;
         this->sigmadelta_pin= new Pwm();
+		if (is_servo) this->sigmadelta_pin->set_servo(true);											  
         this->sigmadelta_pin->from_string(THEKERNEL->config->value(switch_checksum, this->name_checksum, output_pin_checksum )->by_default("nc")->as_string())->as_output();
         if(this->sigmadelta_pin->connected()) {
             if(failsafe == 1) {
@@ -214,9 +219,12 @@ void Switch::on_config_reload(void *argument)
 
     if(this->output_type == SIGMADELTA) {
         // SIGMADELTA
+		if (is_servo) {
+		    THEKERNEL->slow_ticker->attach(5000, this->sigmadelta_pin, &Pwm::on_tick);	
+		} else {																		 		  
         THEKERNEL->slow_ticker->attach(1000, this->sigmadelta_pin, &Pwm::on_tick);
-    }
-
+		}
+	}
     // for commands we need to replace _ for space
     std::replace(output_on_command.begin(), output_on_command.end(), '_', ' '); // replace _ with space
     std::replace(output_off_command.begin(), output_off_command.end(), '_', ' '); // replace _ with space

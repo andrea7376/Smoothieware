@@ -19,12 +19,14 @@ public:
     void     pwm(int);
     int      get_pwm() const { return _pwm; }
     void     set(bool);
+	void 	 set_servo(bool);
 
 private:
     int  _max;
     int  _pwm;
     int  _sd_accumulator;
     bool _sd_direction;
+	bool _is_servo;
 };
 
 #endif /* _PWM_H */
